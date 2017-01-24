@@ -32,7 +32,13 @@ func CalleesOf(caller *Node) map[*Node]bool {
 // If edge function returns non-nil, visitation stops and GraphVisitEdgesBFS returns
 // that value.
 //
-func GraphVisitEdgesBFS(g *Graph, funcName string, level int, edge func(*Edge) error) error {
+func GraphVisitEdgesBFS(g *Graph, funcName string, filters []string, level int, edge func(*Edge) error) error {
+	var filteredPackageNames = make(map[string]bool)
+	var radixTree = RadixTree{Root: new(RadixNode)}
+	for _, filter := range filters {
+		filteredPackageNames[filter] = true
+		radixTree.Add(filter)
+	}
 	seen := make(map[*Node]bool)
 	var queue = list.New()
 	var visit = func(n *Node) error {
@@ -40,6 +46,11 @@ func GraphVisitEdgesBFS(g *Graph, funcName string, level int, edge func(*Edge) e
 			seen[n] = true
 			for _, e := range n.Out {
 				e.Callee.depth = n.depth + 1
+				path := e.Callee.Func.Pkg.Pkg.Path()
+				l := radixTree.LongestPrefix(path)
+				if len(l) == len(path) {
+					continue
+				}
 				queue.PushBack(e.Callee)
 				if err := edge(e); err != nil {
 					return err
@@ -50,12 +61,12 @@ func GraphVisitEdgesBFS(g *Graph, funcName string, level int, edge func(*Edge) e
 	}
 	var root *Node
 	for node, _ := range g.Nodes {
-		if node.String() == funcName {
+		if node != nil && node.String() == funcName {
 			root = g.CreateNode(node)
 		}
 	}
 	if root == nil {
-		return errors.New("func not found")
+		return NoFuncFound
 	}
 	queue.PushBack(root)
 	var n = new(Node)

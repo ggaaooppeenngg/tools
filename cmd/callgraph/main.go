@@ -30,6 +30,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"text/template"
 
 	"golang.org/x/tools/go/buildutil"
@@ -63,10 +64,26 @@ var (
 
 	entryFlag = flag.String("entry", "",
 		"Entry function for analysis, default is all root functions(main, init)")
+
+	stdFlag = flag.Bool("std", false,
+		"Expand standard libraries, Standard library is not showed by default")
+
+	filtersFlag = flag.String("filters", "",
+		"A string of comma seperated package names to be filtered.")
 )
 
 func init() {
 	flag.Var((*buildutil.TagsFlag)(&build.Default.BuildTags), "tags", buildutil.TagsFlagDoc)
+}
+
+func filters() []string {
+	var fs []string
+	if *stdFlag == false {
+		fs = append(fs, stdPackageNames...)
+	}
+	ff := strings.Split(*filtersFlag, ",")
+	fs = append(fs, ff...)
+	return fs
 }
 
 const Usage = `callgraph: display the the call graph of a Go program.
@@ -288,7 +305,7 @@ func doCallgraph(ctxt *build.Context, algo, format string, tests bool, args []st
 
 	fmt.Fprint(stdout, before)
 	if *levelFlag > 0 {
-		if err := callgraph.GraphVisitEdgesBFS(cg, *entryFlag, *levelFlag, func(edge *callgraph.Edge) error {
+		if err := callgraph.GraphVisitEdgesBFS(cg, *entryFlag, filters(), *levelFlag, func(edge *callgraph.Edge) error {
 			data.position.Offset = -1
 			data.edge = edge
 			data.Caller = edge.Caller.Func
