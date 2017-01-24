@@ -57,6 +57,12 @@ var (
 
 	ptalogFlag = flag.String("ptalog", "",
 		"Location of the points-to analysis log file, or empty to disable logging.")
+
+	levelFlag = flag.Int("level", 0,
+		"Recursive level of call graph, expand all functions by default")
+
+	entryFlag = flag.String("entry", "",
+		"Entry function for analysis, default is all root functions(main, init)")
 )
 
 func init() {
@@ -281,23 +287,44 @@ func doCallgraph(ctxt *build.Context, algo, format string, tests bool, args []st
 	data := Edge{fset: prog.Fset}
 
 	fmt.Fprint(stdout, before)
-	if err := callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
-		data.position.Offset = -1
-		data.edge = edge
-		data.Caller = edge.Caller.Func
-		data.Callee = edge.Callee.Func
+	if *levelFlag > 0 {
+		if err := callgraph.GraphVisitEdgesBFS(cg, *entryFlag, *levelFlag, func(edge *callgraph.Edge) error {
+			data.position.Offset = -1
+			data.edge = edge
+			data.Caller = edge.Caller.Func
+			data.Callee = edge.Callee.Func
 
-		buf.Reset()
-		if err := tmpl.Execute(&buf, &data); err != nil {
+			buf.Reset()
+			if err := tmpl.Execute(&buf, &data); err != nil {
+				return err
+			}
+			stdout.Write(buf.Bytes())
+			if len := buf.Len(); len == 0 || buf.Bytes()[len-1] != '\n' {
+				fmt.Fprintln(stdout)
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
-		stdout.Write(buf.Bytes())
-		if len := buf.Len(); len == 0 || buf.Bytes()[len-1] != '\n' {
-			fmt.Fprintln(stdout)
+	} else {
+		if err := callgraph.GraphVisitEdges(cg, func(edge *callgraph.Edge) error {
+			data.position.Offset = -1
+			data.edge = edge
+			data.Caller = edge.Caller.Func
+			data.Callee = edge.Callee.Func
+
+			buf.Reset()
+			if err := tmpl.Execute(&buf, &data); err != nil {
+				return err
+			}
+			stdout.Write(buf.Bytes())
+			if len := buf.Len(); len == 0 || buf.Bytes()[len-1] != '\n' {
+				fmt.Fprintln(stdout)
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
-		return nil
-	}); err != nil {
-		return err
 	}
 	fmt.Fprint(stdout, after)
 	return nil

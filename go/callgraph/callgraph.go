@@ -76,10 +76,11 @@ func (g *Graph) CreateNode(fn *ssa.Function) *Node {
 
 // A Node represents a node in a call graph.
 type Node struct {
-	Func *ssa.Function // the function this node represents
-	ID   int           // 0-based sequence number
-	In   []*Edge       // unordered set of incoming call edges (n.In[*].Callee == n)
-	Out  []*Edge       // unordered set of outgoing call edges (n.Out[*].Caller == n)
+	Func  *ssa.Function // the function this node represents
+	ID    int           // 0-based sequence number
+	In    []*Edge       // unordered set of incoming call edges (n.In[*].Callee == n)
+	Out   []*Edge       // unordered set of outgoing call edges (n.Out[*].Caller == n)
+	depth int           // the depth level in search
 }
 
 func (n *Node) String() string {

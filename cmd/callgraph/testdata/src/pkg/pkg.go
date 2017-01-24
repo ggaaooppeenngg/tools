@@ -15,7 +15,6 @@ func (D) f() {}
 func main() {
 	var i I = C(0)
 	i.f() // dynamic call
-
 	main2()
 }
 

@@ -4,7 +4,14 @@
 
 package callgraph
 
-import "golang.org/x/tools/go/ssa"
+import (
+	"container/list"
+	"errors"
+
+	"golang.org/x/tools/go/ssa"
+)
+
+var NoFuncFound = errors.New("func not found")
 
 // This file provides various utilities over call graphs, such as
 // visitation and path search.
@@ -18,6 +25,50 @@ func CalleesOf(caller *Node) map[*Node]bool {
 		callees[e.Callee] = true
 	}
 	return callees
+}
+
+// GraphVisitEdgesBFS visits all the edges in graph g in breadth-first-search order,
+// argument level can be used to specify search depth level.
+// If edge function returns non-nil, visitation stops and GraphVisitEdgesBFS returns
+// that value.
+//
+func GraphVisitEdgesBFS(g *Graph, funcName string, level int, edge func(*Edge) error) error {
+	seen := make(map[*Node]bool)
+	var queue = list.New()
+	var visit = func(n *Node) error {
+		if !seen[n] {
+			seen[n] = true
+			for _, e := range n.Out {
+				e.Callee.depth = n.depth + 1
+				queue.PushBack(e.Callee)
+				if err := edge(e); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	var root *Node
+	for node, _ := range g.Nodes {
+		if node.String() == funcName {
+			root = g.CreateNode(node)
+		}
+	}
+	if root == nil {
+		return errors.New("func not found")
+	}
+	queue.PushBack(root)
+	var n = new(Node)
+	for queue.Len() != 0 {
+		front := queue.Front()
+		n = front.Value.(*Node)
+		if n.depth >= level {
+			break
+		}
+		visit(n)
+		queue.Remove(front)
+	}
+	return nil
 }
 
 // GraphVisitEdges visits all the edges in graph g in depth-first order.
