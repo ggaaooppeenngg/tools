@@ -47,3 +47,4 @@ dot -Tpng callgraph.dot -o callgraph.png
 
 每个算法的精确度依次增加，消耗时间也会增加，默认使用的是 rta。
 
+## 标示某个函数是 go 出去的
