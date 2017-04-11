@@ -25,6 +25,11 @@ callgraph --level=2 --entry "golang.org/x/tools/cmd/callgraph.main" .
 cd $GOPATH/src/golang.org/x/tools/cmd/callgraph
 callgraph --format graphviz --level 2 --entry "golang.org/x/tools/cmd/callgraph.main" . > callgraph.dot
 ```
+默认算法要查找`main`，如果没有`main`可以指定`--algo=cha`来获取调用图
+```
+callgraph --algo=cha --level=2 --entry "(*github.com/cockroachdb/cockroach/pkg/server.Node).Batch" .
+```
+
 MAC 安装 graphviz 
 ```
 brew install graphviz
